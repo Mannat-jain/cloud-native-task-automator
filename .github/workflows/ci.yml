@@ -1,0 +1,28 @@
+name: Continuous Integration Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    - name: Set up Java 17 Core Environment
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: 'maven' # Unit V: Using caching for faster workflow builds
+
+    - name: Execute Maven Lifecycle Packaging
+      run: mvn package -DskipTests
+
+    - name: Validate Docker Compose Orchestration Assembly
+      run: docker compose build

@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # Data Tier Layer: Isolated relational database engine
+  db:
+    image: postgres:16-alpine
+    container_name: task_db_container
+    environment:
+      POSTGRES_DB: taskdb
+      POSTGRES_USER: taskuser
+      POSTGRES_PASSWORD: taskpass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend_net
+    # The database does NOT expose ports to the host network interface.
+    # It is intentionally accessible ONLY within backend_net for secure isolation.
+
+  # Application Tier Layer: Headless Spring Boot API 
+# Application Tier Layer: Headless Spring Boot API 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      network: host  # <-- This forces Compose to give the builder internet access!
+    pull_policy: never
+    container_name: task_app_container
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/taskdb
+      SPRING_DATASOURCE_USERNAME: taskuser
+      SPRING_DATASOURCE_PASSWORD: taskpass
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    depends_on:
+      - db
+    networks:
+      - backend_net
+
+# Declarative Storage Architecture: Persists relational records beyond container restarts
+volumes:
+  postgres_data:
+
+# Network Architecture Segment: Custom bridge topology isolating cluster traffic
+networks:
+  backend_net:
+    driver: bridge
