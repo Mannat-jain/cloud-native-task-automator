@@ -26,7 +26,7 @@ services:
     pull_policy: never
     container_name: task_app_container
     ports:
-      - "8080:8080"
+      - "5050:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/taskdb
       SPRING_DATASOURCE_USERNAME: taskuser

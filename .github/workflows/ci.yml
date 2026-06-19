@@ -21,8 +21,8 @@ jobs:
         distribution: 'temurin'
         cache: 'maven' # Unit V: Using caching for faster workflow builds
 
-    - name: Execute Maven Lifecycle Packaging
-      run: mvn package -DskipTests
+    - name: Execute Maven Lifecycle Verification (Run Unit & Integration Tests)
+      run: mvn clean verify
 
     - name: Validate Docker Compose Orchestration Assembly
       run: docker compose build
