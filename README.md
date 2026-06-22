@@ -14,23 +14,6 @@ A headless, container-orchestrated Spring Boot microservice engineered with clou
 
 This project is built using a decoupled multi-tier architecture, containerized with Docker, and orchestrated via Docker Compose. Below is a high-level representation of the request path, network boundary, and isolated database topology:
 
-```mermaid
-graph TD
-    subgraph Host OS (Development / Production Host)
-        subgraph Docker Compose Orchestration Boundary
-            subgraph Private Bridge Network (backend_net)
-                APP[Spring Boot API Container<br>task_app_container:8080] <-->|Internal JDBC - Port 5432| DB[(PostgreSQL Database<br>task_db_container)]
-            end
-            HOST_PORT[Host Port 5050] -->|Port Mapping| APP
-        end
-        CLIENT[REST Client / Browser] -->|HTTP Requests| HOST_PORT
-    end
-
-    style DB fill:#336791,stroke:#fff,stroke-width:2px,color:#fff
-    style APP fill:#6db33f,stroke:#fff,stroke-width:2px,color:#fff
-    style CLIENT fill:#e87333,stroke:#fff,stroke-width:2px,color:#fff
-```
-
 ---
 
 ## 🛠️ Key Architectural Decisions & Engineering Complexity
