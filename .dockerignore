@@ -1,6 +1,9 @@
 target/
 .git/
+.github/
 .gitignore
+.env
 *.iml
 .idea/
 .vscode/
+README.md

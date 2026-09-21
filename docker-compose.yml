@@ -1,47 +1,62 @@
-version: '3.8'
-
+# Two tiers on two networks:
+#   frontend_net  - the only network that publishes a port to the host (the API on :5050)
+#   backend_net   - internal: true, i.e. NO route to the host or the internet. Only the API and Postgres are on it.
+# Postgres therefore has no published port and cannot be reached from outside the Docker network.
 services:
-  # Data Tier Layer: Isolated relational database engine
   db:
     image: postgres:16-alpine
     container_name: task_db_container
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: taskdb
-      POSTGRES_USER: taskuser
-      POSTGRES_PASSWORD: taskpass
+      POSTGRES_DB: ${POSTGRES_DB:-taskdb}
+      POSTGRES_USER: ${POSTGRES_USER:-taskuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env and set POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - backend_net
-    # The database does NOT expose ports to the host network interface.
-    # It is intentionally accessible ONLY within backend_net for secure isolation.
+    # NOTE: no "ports:" on purpose.
+    healthcheck:
+      # $$ is escaped so the variables are expanded INSIDE the container, not by Compose.
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12          # 12 x 5 s = the same 60-second readiness window as HikariCP's initialization-fail-timeout
+      start_period: 10s
 
-  # Application Tier Layer: Headless Spring Boot API 
-# Application Tier Layer: Headless Spring Boot API 
   app:
     build:
       context: .
       dockerfile: Dockerfile
-      network: host  # <-- This forces Compose to give the builder internet access!
-    pull_policy: never
+      # If your network blocks the build from reaching Maven Central, uncomment:
+      # network: host
     container_name: task_app_container
+    restart: unless-stopped
     ports:
       - "5050:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/taskdb
-      SPRING_DATASOURCE_USERNAME: taskuser
-      SPRING_DATASOURCE_PASSWORD: taskpass
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-taskdb}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-taskuser}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
     depends_on:
-      - db
+      db:
+        condition: service_healthy     # start only once Postgres accepts connections (plain depends_on only waits for container START)
     networks:
+      - frontend_net
       - backend_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 40s
 
-# Declarative Storage Architecture: Persists relational records beyond container restarts
 volumes:
   postgres_data:
 
-# Network Architecture Segment: Custom bridge topology isolating cluster traffic
 networks:
+  frontend_net:
+    driver: bridge
   backend_net:
     driver: bridge
+    internal: true

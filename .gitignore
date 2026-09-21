@@ -1,0 +1,11 @@
+# Build output
+target/
+
+# Secrets
+.env
+
+# IDEs / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
